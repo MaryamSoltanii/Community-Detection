@@ -1,37 +1,38 @@
+import numpy as np
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import normalize
-import numpy as np
+import networkx as nx
 
 def spectral_clustering(G, num_clusters=2):
     """
-    Applies spectral clustering using the normalized graph Laplacian.
+    Performs community detection using spectral clustering (normalized Laplacian).
     
-    Parameters:
-        G (networkx.Graph): Input graph (assumed undirected).
-        num_clusters (int): Desired number of clusters.
+    Args:
+        G (networkx.Graph): Input graph.
+        num_clusters (int): Desired number of clusters (default: 2).
     
     Returns:
-        communities (List[Set]): List of node sets representing clusters.
+        list: A list of sets, where each set represents a community of nodes.
     """
     # Step 1: Compute the normalized Laplacian matrix
     L = nx.normalized_laplacian_matrix(G).todense()
-
-    # Step 2: Compute the first 'k' eigenvectors (smallest eigenvalues)
-    eigvals, eigvecs = np.linalg.eigh(L)  # چون ماتریس L متقارن است، eigh مناسب‌تر است
-
-    # Step 3: انتخاب eigenvectors متناظر با کوچک‌ترین k مقدار ویژه
+    
+    # Step 2: Compute eigenvectors of the Laplacian
+    eigvals, eigvecs = np.linalg.eigh(L)
+    
+    # Step 3: Select the first `num_clusters` eigenvectors (smallest eigenvalues)
     k_smallest_eigvecs = eigvecs[:, :num_clusters]
-
-    # Step 4: نرمال‌سازی سطرها (برای خوشه‌بندی بهتر)
+    
+    # Step 4: Normalize rows for better clustering
     normed_features = normalize(k_smallest_eigvecs)
-
-    # Step 5: اعمال KMeans روی eigenvectors
+    
+    # Step 5: Apply KMeans clustering
     kmeans = KMeans(n_clusters=num_clusters, n_init=100)
     labels = kmeans.fit_predict(normed_features)
-
-    # Step 6: ساخت خروجی به صورت لیست مجموعه‌ها
+    
+    # Step 6: Convert labels to communities
     communities = {}
     for node, label in zip(G.nodes(), labels):
         communities.setdefault(label, set()).add(node)
-
+    
     return list(communities.values())
